@@ -8,6 +8,8 @@ import be.achent.witherslayer.Events.WitherSlayerRewardsEvent;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Wither;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
@@ -20,27 +22,32 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 
-public final class WitherSlayer extends JavaPlugin  implements Listener {
+public final class WitherSlayer extends JavaPlugin implements Listener {
 
-    public static WitherSlayer plugin;
-    private Messages messages;
+    private static WitherSlayer plugin;
+
     private FileConfiguration languageConfig;
     private File languageConfigFile;
-    public final Map<UUID, Double> damageMap = new HashMap<>();
+    private WitherSlayerRewardsEvent rewardsEvent;
+    private Wither currentWither;
+    private final Map<UUID, Double> damageMap = new HashMap<>();
 
     @Override
     public void onEnable() {
         plugin = this;
-        this.messages = new Messages();
-        this.messages.saveDefaultConfig();
+
         saveDefaultConfig();
+        reloadConfig();
         loadLanguageConfig();
+        loadDamageLeaderboard();
         updateConfigFile("config.yml", "config-default.yml");
         updateConfigFile("language.yml", "language-default.yml");
 
-        new WitherSlayerEvents(this, damageMap);
-        new WitherSlayerRewardsEvent(this);
-        new WitherSlayerRespawnEvent(this).runTaskTimer(this,0, 20 * 60);
+        rewardsEvent = new WitherSlayerRewardsEvent(this);
+
+        new WitherSlayerEvents(this);
+        this.rewardsEvent = new WitherSlayerRewardsEvent(this);
+        new WitherSlayerRespawnEvent(this).runTaskTimer(this, 0L, 20L);
 
         getCommand("witherslayer").setExecutor(new WitherSlayerCommands(this, damageMap));
         getCommand("witherslayer").setTabCompleter(new WitherSlayerTabCompleter());
@@ -132,5 +139,64 @@ public final class WitherSlayer extends JavaPlugin  implements Listener {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public Map<UUID, Double> getDamageMap() {
+        return damageMap;
+    }
+
+    public void addDamage(UUID playerId, double damage) {
+        damageMap.put(playerId, damageMap.getOrDefault(playerId, 0.0) + damage);
+    }
+
+    public void clearDamageMap() {
+        damageMap.clear();
+    }
+
+    public void saveDamageLeaderboard() {
+        File leaderboardFile = new File(getDataFolder(), "damageleaderboard.yml");
+        FileConfiguration leaderboardConfig = YamlConfiguration.loadConfiguration(leaderboardFile);
+
+        for (Map.Entry<UUID, Double> entry : damageMap.entrySet()) {
+            leaderboardConfig.set(entry.getKey().toString(), entry.getValue());
+        }
+
+        try {
+            leaderboardConfig.save(leaderboardFile);
+        } catch (IOException e) {
+            getLogger().severe("Could not save damage leaderboard to damageleaderboard.yml");
+            e.printStackTrace();
+        }
+    }
+
+    public void loadDamageLeaderboard() {
+        File leaderboardFile = new File(getDataFolder(), "damageleaderboard.yml");
+        if (!leaderboardFile.exists()) {
+            return;
+        }
+
+        FileConfiguration leaderboardConfig = YamlConfiguration.loadConfiguration(leaderboardFile);
+        for (String key : leaderboardConfig.getKeys(false)) {
+            UUID playerId = UUID.fromString(key);
+            double damage = leaderboardConfig.getDouble(key);
+            damageMap.put(playerId, damage);
+        }
+    }
+
+    public void giveRewardsToPlayer(Player player, int rank, double playerDamage) {
+        if (this.rewardsEvent != null) {
+            double damage = getDamageMap().getOrDefault(player.getUniqueId(), 0.0);
+            this.rewardsEvent.executeRewards(player, rank, damage);
+        } else {
+            getLogger().warning("rewardsEvent is null. Cannot give rewards to player.");
+        }
+    }
+
+    public Wither getCurrentWither() {
+        return currentWither;
+    }
+
+    public void setCurrentWither(Wither wither) {
+        this.currentWither = wither;
     }
 }

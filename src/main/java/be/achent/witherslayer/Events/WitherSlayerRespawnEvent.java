@@ -4,6 +4,7 @@ import be.achent.witherslayer.WitherSlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Wither;
 import org.bukkit.scheduler.BukkitRunnable;
 import java.time.LocalTime;
@@ -14,10 +15,12 @@ import java.util.List;
 public class WitherSlayerRespawnEvent extends BukkitRunnable {
 
     private final WitherSlayer plugin;
+    private Wither currentWither;
 
     public WitherSlayerRespawnEvent(WitherSlayer plugin) {
         this.plugin = plugin;
     }
+
     @Override
     public void run() {
         LocalTime now = LocalTime.now();
@@ -29,18 +32,16 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable {
             LocalTime spawnTime = LocalTime.parse(spawntime, DateTimeFormatter.ofPattern("HH:mm"));
             int secondsUntilSpawn = (int) java.time.Duration.between(now, spawnTime).getSeconds();
 
-            plugin.getLogger().info("Checking spawn time: " + spawntime + " - Seconds until spawn: " + secondsUntilSpawn); // Log spawn time check
-
             for (int preTime : preSpawnTimes) {
                 if (secondsUntilSpawn == preTime) {
                     Bukkit.broadcastMessage(plugin.getLanguageMessage("messages.Announcement before wither spawn").replace("{time}", String.valueOf(preTime)));
-                    plugin.getLogger().info("Pre-spawn message sent for time: " + preTime); // Log pre-spawn message
+                    plugin.getLogger().info("Pre-spawn message sent for time: " + preTime);
                 }
             }
 
-            if (secondsUntilSpawn == 0) {
+            if (secondsUntilSpawn == 0 && currentWither == null) {
                 spawnWither();
-                plugin.getLogger().info("Wither spawned at time: " + spawntime); // Log wither spawn
+                plugin.getLogger().info("Wither spawned at time: " + spawntime);
             }
         }
     }
@@ -81,11 +82,11 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable {
             double z = plugin.getConfig().getDouble("wither respawn.spawn location.z");
             Location location = new Location(world, x, y, z);
 
-            world.spawn(location, Wither.class);
-            Bukkit.broadcastMessage(plugin.getLanguageMessage("messages.Wither Spawned").replace("{location}", location.toString()));
-            plugin.getLogger().info("Wither spawned at location: " + location); // Log wither spawn location
+            currentWither = (Wither) world.spawnEntity(location, EntityType.WITHER);
+            Bukkit.broadcastMessage(plugin.getLanguageMessage("messages.Wither spawned").replace("{location}", location.toString()));
+            plugin.getLogger().info("Wither spawned at location: " + location);
         } else {
-            plugin.getLogger().warning("World not found: " + worldName); // Log world not found
+            plugin.getLogger().warning("World not found: " + worldName);
         }
     }
 }

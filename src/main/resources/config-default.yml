@@ -12,7 +12,6 @@ wither respawn:
     y: 64
     z: -100
 
-
 # Rewards for each wither killed for everyone
 # You can define specific command for each rank of the leaderboard
 Rewards:

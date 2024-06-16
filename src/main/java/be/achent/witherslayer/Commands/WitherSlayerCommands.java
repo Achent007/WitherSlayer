@@ -6,7 +6,10 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import java.util.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class WitherSlayerCommands implements CommandExecutor {
@@ -37,6 +40,8 @@ public class WitherSlayerCommands implements CommandExecutor {
                     return true;
                 }
 
+                plugin.loadDamageLeaderboard();
+
                 if (damageMap.isEmpty()) {
                     sender.sendMessage(plugin.getLanguageMessage("messages.No Data"));
                     return true;
@@ -56,21 +61,18 @@ public class WitherSlayerCommands implements CommandExecutor {
                                 .replace("{position}", String.valueOf(i + 1))
                                 .replace("{player}", player.getName())
                                 .replace("{damage}", String.valueOf(damage));
-                        sender.sendMessage(plugin.getLanguageMessage("messages.Leaderboard footer"));
+                        sender.sendMessage(message);
                     }
                 }
+                sender.sendMessage(plugin.getLanguageMessage("messages.Leaderboard footer"));
                 return true;
-            }
-
-            if (args.length != 1) {
-                List<String> incorrectUsageMessages = plugin.getLanguageMessageList("messages.Incorrect usage");
-                for (String message : incorrectUsageMessages) {
-                    sender.sendMessage(message.replace("{prefix}", "[WitherSlayer]"));
-                }
-                return false;
             }
         }
 
+        List<String> incorrectUsageMessages = plugin.getLanguageMessageList("messages.Incorrect usage");
+        for (String message : incorrectUsageMessages) {
+            sender.sendMessage(message);
+        }
         return false;
     }
 }
