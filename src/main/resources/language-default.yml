@@ -1,0 +1,15 @@
+messages:
+  prefix: "&8[&4WitherSlayer&8]"
+  Reloaded: "{prefix} &aConfiguration reloaded."
+  Incorrect usage:
+    - "{prefix} &eCommand list :"
+    - "&c/witherslayer reload &7- &fReload the plugin"
+    - "&c/witherslayer leaderboard &7 &fShow damage leaderboard"
+  No Permission: "{prefix} &cYou don't have the permission."
+  No Data: "{prefix} &cNo data avaiable."
+  Leaderboard header: "{prefix} &7- &eLeaderboard"
+  Leaderboard position: "{position} &8- &6{player} {damage} damage"
+  Leaderboard footer: "{prefix} &7- &eLeaderboard"
+  Kill message: "{prefix} &b{player} has slain the wither with their friends."
+  Wither spawned: "{prefix} The wither is back, go exterminate him."
+  Announcement before wither spawn: "{prefix} The wither is coming back in {seconds} seconds."

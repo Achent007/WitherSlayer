@@ -1,0 +1,19 @@
+name: WitherSlayer
+author: Achent
+version: '${project.version}'
+main: be.achent.witherslayer.WitherSlayer
+commands:
+  witherslayer:
+    description: Main Command
+permissions:
+  witherslayer.*:
+    description: Give all permissions
+    children:
+      witherslayer.use: true
+      witherslayer.reload: true
+  witherslayer.use:
+    description: Permission to use the verification system
+    default: op
+  witherslayer.reload:
+    description: Permission for the reload command
+    default: op

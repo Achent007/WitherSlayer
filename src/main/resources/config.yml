@@ -1,0 +1,24 @@
+# World where all wither killed inside will be triggered
+witherworld: "world_nether"
+
+# Define when, were the wither need to be respawned and how much life he has
+wither respawn:
+  spawntimes: "00:30,01:30,02:30"
+  respawn announcements: "300,60,30,10"
+  health: 300
+  spawn location:
+    world: "world_nether"
+    x: 100
+    y: 64
+    z: -100
+
+
+# Rewards for each wither killed for everyone
+# You can define specific command for each rank of the leaderboard
+Rewards:
+  EXP: 1000
+  rankcommands_1:
+    - '{100}give {player} diamond 1' #100% chance reward
+    - '{50}give {player} diamond 1' #50% chance to have this diamond in addition of the first one
+  rankcommands_2:
+    - '{50}give {player} diamond 1'
