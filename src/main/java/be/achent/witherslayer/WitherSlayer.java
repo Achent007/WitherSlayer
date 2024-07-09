@@ -3,13 +3,9 @@ package be.achent.witherslayer;
 import be.achent.witherslayer.Commands.WitherSlayerCommands;
 import be.achent.witherslayer.Commands.WitherSlayerTabCompleter;
 import be.achent.witherslayer.Events.WitherSlayerEvents;
-import be.achent.witherslayer.Events.WitherSlayerRespawnEvent;
-import be.achent.witherslayer.Events.WitherSlayerRewardsEvent;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Wither;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
@@ -28,8 +24,6 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
 
     private FileConfiguration languageConfig;
     private File languageConfigFile;
-    private WitherSlayerRewardsEvent rewardsEvent;
-    private Wither currentWither;
     private final Map<UUID, Double> damageMap = new HashMap<>();
 
     @Override
@@ -43,11 +37,7 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         updateConfigFile("config.yml", "config-default.yml");
         updateConfigFile("language.yml", "language-default.yml");
 
-        rewardsEvent = new WitherSlayerRewardsEvent(this);
-
         new WitherSlayerEvents(this);
-        this.rewardsEvent = new WitherSlayerRewardsEvent(this);
-        new WitherSlayerRespawnEvent(this).runTaskTimer(this, 0L, 20L);
 
         getCommand("witherslayer").setExecutor(new WitherSlayerCommands(this, damageMap));
         getCommand("witherslayer").setTabCompleter(new WitherSlayerTabCompleter());
@@ -60,9 +50,7 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
     public List<String> getLanguageMessageList(String path) {
         List<String> messages = this.languageConfig.getStringList(path);
         if (!messages.isEmpty()) {
-            for (int i = 0; i < messages.size(); i++) {
-                messages.set(i, formatMessage(messages.get(i)));
-            }
+            messages.replaceAll(this::formatMessage);
             return messages;
         } else {
             getLogger().warning("Message path '" + path + "' not found in language.yml");
@@ -181,22 +169,5 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
             double damage = leaderboardConfig.getDouble(key);
             damageMap.put(playerId, damage);
         }
-    }
-
-    public void giveRewardsToPlayer(Player player, int rank, double playerDamage) {
-        if (this.rewardsEvent != null) {
-            double damage = getDamageMap().getOrDefault(player.getUniqueId(), 0.0);
-            this.rewardsEvent.executeRewards(player, rank, damage);
-        } else {
-            getLogger().warning("rewardsEvent is null. Cannot give rewards to player.");
-        }
-    }
-
-    public Wither getCurrentWither() {
-        return currentWither;
-    }
-
-    public void setCurrentWither(Wither wither) {
-        this.currentWither = wither;
     }
 }

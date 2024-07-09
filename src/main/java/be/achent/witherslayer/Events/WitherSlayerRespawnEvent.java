@@ -4,9 +4,11 @@ import be.achent.witherslayer.WitherSlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Wither;
 import org.bukkit.scheduler.BukkitRunnable;
+
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -24,7 +26,6 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable {
     @Override
     public void run() {
         LocalTime now = LocalTime.now();
-        String currentTime = now.format(DateTimeFormatter.ofPattern("HH:mm"));
         List<String> spawntimes = parseTimes(plugin.getConfig().getString("wither respawn.spawntimes"));
         List<Integer> preSpawnTimes = parsePreSpawnTimes(plugin.getConfig().getString("wither respawn.respawn announcements"));
 
@@ -83,8 +84,14 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable {
             Location location = new Location(world, x, y, z);
 
             currentWither = (Wither) world.spawnEntity(location, EntityType.WITHER);
+
+            // Ajuster la vie du Wither
+            double witherHealth = plugin.getConfig().getDouble("wither respawn.health");
+            currentWither.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(witherHealth);
+            currentWither.setHealth(witherHealth);
+
             Bukkit.broadcastMessage(plugin.getLanguageMessage("messages.Wither spawned").replace("{location}", location.toString()));
-            plugin.getLogger().info("Wither spawned at location: " + location);
+            plugin.getLogger().info("Wither spawned at location: " + location + " with health: " + witherHealth);
         } else {
             plugin.getLogger().warning("World not found: " + worldName);
         }

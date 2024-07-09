@@ -12,4 +12,4 @@ messages:
   Leaderboard footer: "{prefix} &7- &eLeaderboard"
   Kill message: "{prefix} &b{player} has slain the wither with their friends."
   Wither spawned: "{prefix} The wither is back, go exterminate him."
-  Announcement before wither spawn: "{prefix} The wither is coming back in {seconds} seconds."
+  Announcement before wither spawn: "{prefix} The wither is coming back in {time} seconds."

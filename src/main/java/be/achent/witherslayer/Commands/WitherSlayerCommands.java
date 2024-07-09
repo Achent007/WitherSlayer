@@ -2,11 +2,10 @@ package be.achent.witherslayer.Commands;
 
 import be.achent.witherslayer.WitherSlayer;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +31,7 @@ public class WitherSlayerCommands implements CommandExecutor {
                 }
                 plugin.reloadConfig();
                 plugin.reloadLanguageConfig();
+                plugin.loadDamageLeaderboard();
                 sender.sendMessage(plugin.getLanguageMessage("messages.Reloaded"));
                 return true;
             } else if (args[0].equalsIgnoreCase("leaderboard")) {
@@ -55,14 +55,14 @@ public class WitherSlayerCommands implements CommandExecutor {
                 for (int i = 0; i < sortedList.size(); i++) {
                     UUID playerUUID = sortedList.get(i).getKey();
                     double damage = sortedList.get(i).getValue();
-                    Player player = Bukkit.getPlayer(playerUUID);
-                    if (player != null) {
-                        String message = plugin.getLanguageMessage("messages.Leaderboard position")
-                                .replace("{position}", String.valueOf(i + 1))
-                                .replace("{player}", player.getName())
-                                .replace("{damage}", String.valueOf(damage));
-                        sender.sendMessage(message);
-                    }
+                    OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerUUID);
+                    String playerName = offlinePlayer != null && offlinePlayer.getName() != null ? offlinePlayer.getName() : "Unknown";
+
+                    String message = plugin.getLanguageMessage("messages.Leaderboard position")
+                            .replace("{position}", String.valueOf(i + 1))
+                            .replace("{player}", playerName)
+                            .replace("{damage}", String.format("%.2f", damage));
+                    sender.sendMessage(message);
                 }
                 sender.sendMessage(plugin.getLanguageMessage("messages.Leaderboard footer"));
                 return true;
