@@ -25,6 +25,12 @@ public class WitherSlayerEvents implements Listener {
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof Wither) {
+            Wither wither = (Wither) event.getEntity();
+            String witherWorldName = plugin.getConfig().getString("witherworld");
+            if (!wither.getWorld().getName().equals(witherWorldName)) {
+                return;
+            }
+
             Entity damager = event.getDamager();
             double damage = event.getFinalDamage();
             if (damager instanceof Player) {
