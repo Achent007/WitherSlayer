@@ -15,6 +15,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -22,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
 
 public final class WitherSlayer extends JavaPlugin implements Listener {
 
@@ -34,6 +35,7 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
     private FileConfiguration leaderboardConfig;
     private WitherSlayerRespawnEvent witherRespawnEvent;
     private final Map<UUID, Double> damageMap = new HashMap<>();
+    private boolean debugEnabled;
 
     @Override
     public void onEnable() {
@@ -41,6 +43,7 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
 
         saveDefaultConfig();
         reloadConfig();
+        debugEnabled = getConfig().getBoolean("debug", false); // Lire la valeur de débogage depuis la configuration
         loadLanguageConfig();
         loadLeaderboardConfig();
         updateConfigFile("config.yml", "config-default.yml");
@@ -58,13 +61,42 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         return plugin;
     }
 
+    public void reloadConfigWithPreservedComments() {
+        File configFile = new File(getDataFolder(), "config.yml");
+        if (!configFile.exists()) {
+            saveResource("config.yml", false);
+        } else {
+            try {
+                File tempFile = new File(getDataFolder(), "config_temp.yml");
+                Files.copy(configFile.toPath(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                FileConfiguration tempConfig = YamlConfiguration.loadConfiguration(tempFile);
+                FileConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(getResource("config.yml")));
+
+                for (String key : defaultConfig.getKeys(false)) {
+                    if (!tempConfig.contains(key)) {
+                        tempConfig.set(key, defaultConfig.get(key));
+                    }
+                }
+
+                tempConfig.save(configFile);
+                Files.delete(tempFile.toPath());
+            } catch (IOException e) {
+                getLogger().severe("Could not preserve comments in config.yml: " + e.getMessage());
+            }
+        }
+    }
+
     public void reloadConfigWithErrors(CommandSender sender) {
         try {
-            reloadConfig();
+            reloadConfigWithPreservedComments();
+            debugEnabled = getConfig().getBoolean("debug", false);
             reloadLanguageConfig();
             loadLeaderboardConfig();
             updateConfigFile("config.yml", "config-default.yml");
             updateConfigFile("language.yml", "language-default.yml");
+
+            witherRespawnEvent.resetErrorLogged();
 
             String spawnTimes = getConfig().getString("wither respawn.spawntimes");
             for (String time : spawnTimes.split(",")) {
@@ -74,10 +106,10 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
             sender.sendMessage(getLanguageMessage("messages.Reloaded"));
         } catch (DateTimeParseException e) {
             sender.sendMessage(getLanguageMessage("messages.Reload failed"));
-            getLogger().severe("Invalid time format in configuration: " + e.getParsedString());
+            getLogger().severe("Format de temps invalide pour l'heure de réapparition : " + e.getParsedString());
         } catch (Exception e) {
             sender.sendMessage(getLanguageMessage("messages.Reload failed"));
-            getLogger().severe("Failed to reload the configuration: " + e.getMessage());
+            getLogger().severe("Impossible de recharger la configuration : " + e.getMessage());
         }
     }
 
@@ -87,7 +119,7 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
             messages.replaceAll(this::formatMessage);
             return messages;
         } else {
-            getLogger().warning("Le chemin de message '" + path + "' n'a pas été trouvé dans language.yml");
+            logWarning("Le chemin de message '" + path + "' n'a pas été trouvé dans language.yml");
             return List.of("");
         }
     }
@@ -97,7 +129,7 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         if (message != null) {
             return formatMessage(message);
         } else {
-            getLogger().warning("Le chemin de message '" + path + "' n'a pas été trouvé dans language.yml");
+            logWarning("Le chemin de message '" + path + "' n'a pas été trouvé dans language.yml");
             return "";
         }
     }
@@ -145,7 +177,7 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
         InputStream defaultConfigStream = getResource(defaultFileName);
         if (defaultConfigStream == null) {
-            getLogger().log(Level.SEVERE, "Fichier de configuration par défaut " + defaultFileName + " non trouvé.");
+            logSevere("Fichier de configuration par défaut " + defaultFileName + " non trouvé.");
             return;
         }
 
@@ -159,7 +191,7 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         try {
             config.save(configFile);
         } catch (IOException e) {
-            getLogger().log(Level.SEVERE, "Erreur lors de la sauvegarde du fichier " + fileName + " : " + e.getMessage());
+            logSevere("Erreur lors de la sauvegarde du fichier " + fileName + " : " + e.getMessage());
         }
     }
 
@@ -174,7 +206,7 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
     public void clearDamageMap() {
         if (!damageMap.isEmpty()) {
             damageMap.clear();
-            plugin.getLogger().info("Damage map has been cleared.");
+            logInfo("Données de dégats infligés remise à zéro.");
         }
     }
 
@@ -184,12 +216,12 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         if (!leaderboardFile.exists()) {
             try {
                 if (leaderboardFile.createNewFile()) {
-                    getLogger().info("Le fichier damageleaderboard.yml a été créé avec succès.");
+                    logInfo("Le fichier damageleaderboard.yml a été créé avec succès.");
                 } else {
-                    getLogger().warning("Le fichier damageleaderboard.yml n'a pas pu être créé.");
+                    logWarning("Le fichier damageleaderboard.yml n'a pas pu être créé.");
                 }
             } catch (IOException e) {
-                getLogger().log(Level.SEVERE, "Erreur lors de la création du fichier de classement : " + e.getMessage());
+                logSevere("Erreur lors de la création du fichier de classement : " + e.getMessage());
             }
         }
 
@@ -198,7 +230,7 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
 
     public void saveLeaderboardConfig() {
         if (leaderboardConfig == null) {
-            getLogger().warning("Tentative de sauvegarde du classement alors que la configuration n'a pas été chargée.");
+            logWarning("Tentative de sauvegarde du classement alors que la configuration n'a pas été chargée.");
             return;
         }
 
@@ -208,13 +240,13 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         try {
             leaderboardConfig.save(leaderboardFile);
         } catch (IOException e) {
-            getLogger().log(Level.SEVERE, "Erreur lors de la sauvegarde du fichier de classement : " + e.getMessage());
+            logSevere("Erreur lors de la sauvegarde du fichier de classement : " + e.getMessage());
         }
     }
 
     public void loadDamageMap() {
         if (leaderboardConfig == null || !leaderboardConfig.contains("damage")) {
-            getLogger().warning("Aucune donnée de classement trouvée dans le fichier damageleaderboard.yml.");
+            logWarning("Aucune donnée de classement trouvée dans le fichier damageleaderboard.yml.");
             return;
         }
 
@@ -226,12 +258,12 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
             damageMap.put(playerUUID, damage);
         }
 
-        getLogger().info("Damage map loaded with " + damageMap.size() + " entries.");
+        logInfo("Classement affiché avec succès.");
     }
 
     public void saveDamageLeaderboard() {
         if (leaderboardConfig == null) {
-            getLogger().warning("Tentative d'enregistrer le classement alors que la configuration n'a pas été chargée.");
+            logWarning("Tentative d'enregistrer le classement alors que la configuration n'a pas été chargée.");
             return;
         }
 
@@ -244,9 +276,29 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
 
     public void clearLeaderboardFile() {
         if (leaderboardConfig != null) {
-            leaderboardConfig.set("damage", null);
+            for (String key : leaderboardConfig.getConfigurationSection("damage").getKeys(false)) {
+                leaderboardConfig.set("damage." + key, null);
+            }
             saveLeaderboardConfig();
-            getLogger().info("Leaderboard file has been cleared.");
+            logInfo("Fichier damageleadeboard.yml remis à zéro.");
+        }
+    }
+
+    public void logInfo(String message) {
+        if (debugEnabled) {
+            getLogger().info(message);
+        }
+    }
+
+    public void logWarning(String message) {
+        if (debugEnabled) {
+            getLogger().warning(message);
+        }
+    }
+
+    public void logSevere(String message) {
+        if (debugEnabled) {
+            getLogger().severe(message);
         }
     }
 }

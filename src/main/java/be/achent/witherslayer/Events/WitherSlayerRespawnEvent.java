@@ -11,8 +11,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.scheduler.BukkitRunnable;
+
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,9 +22,12 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
 
     private final WitherSlayer plugin;
     private Wither currentWither;
+    private boolean witherSpawned;
+    private boolean errorLogged = false;
 
     public WitherSlayerRespawnEvent(WitherSlayer plugin) {
         this.plugin = plugin;
+        this.witherSpawned = false;
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -33,21 +38,33 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
         List<Integer> preSpawnTimes = parsePreSpawnTimes(plugin.getConfig().getString("wither respawn.respawn announcements"));
 
         for (String spawntime : spawntimes) {
-            LocalTime spawnTime = LocalTime.parse(spawntime, DateTimeFormatter.ofPattern("HH:mm"));
-            int secondsUntilSpawn = (int) java.time.Duration.between(now, spawnTime).getSeconds();
+            try {
+                LocalTime spawnTime = LocalTime.parse(spawntime, DateTimeFormatter.ofPattern("HH:mm"));
+                int secondsUntilSpawn = (int) java.time.Duration.between(now, spawnTime).getSeconds();
 
-            for (int preTime : preSpawnTimes) {
-                if (secondsUntilSpawn == preTime) {
-                    Bukkit.broadcastMessage(plugin.getLanguageMessage("messages.Announcement before wither spawn").replace("{time}", formatTime(preTime)));
-                    plugin.getLogger().info("Pre-spawn message sent for time: " + preTime);
+                for (int preTime : preSpawnTimes) {
+                    if (secondsUntilSpawn == preTime) {
+                        String timeMessage = formatTime(preTime);
+                        Bukkit.broadcastMessage(plugin.getLanguageMessage("messages.Announcement before wither spawn").replace("{time}", timeMessage));
+                        plugin.logInfo("Message d'annonce d'apparition dans " + preTime + " secondes effectué");
+                    }
+                }
+
+                if (secondsUntilSpawn == 0 && !witherSpawned) {
+                    spawnWither();
+                    plugin.logInfo("Wither invoqué à " + spawntime);
+                }
+            } catch (DateTimeParseException e) {
+                if (!errorLogged) {
+                    plugin.logSevere("Format de temps invalide pour l'heure de réapparition : " + spawntime);
+                    errorLogged = true;
                 }
             }
-
-            if (secondsUntilSpawn == 0 && (currentWither == null || currentWither.isDead())) {
-                spawnWither();
-                plugin.getLogger().info("Wither spawned at time: " + spawntime);
-            }
         }
+    }
+
+    public void resetErrorLogged() {
+        this.errorLogged = false;
     }
 
     private List<String> parseTimes(String times) {
@@ -69,7 +86,7 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
                 try {
                     timeList.add(Integer.parseInt(time.trim()));
                 } catch (NumberFormatException e) {
-                    plugin.getLogger().warning("Invalid respawn announcements time format: " + time);
+                    plugin.logSevere("Format de temps de réapparition invalide dans le fichier config.yml" + time);
                 }
             }
         }
@@ -92,23 +109,24 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
             currentWither.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(witherHealth);
             currentWither.setHealth(witherHealth);
 
-            Bukkit.broadcastMessage(plugin.getLanguageMessage("messages.Wither spawned").replace("{location}", location.toString()));
-            plugin.getLogger().info("Wither spawned at location: " + location + " with health: " + witherHealth);
+            witherSpawned = true;
 
+            Bukkit.broadcastMessage(plugin.getLanguageMessage("messages.Wither spawned").replace("{location}", location.toString()));
+            plugin.logInfo("Wither apparu à l'endroit : " + location + " avec " + witherHealth + " PV");
             plugin.clearDamageMap();
             plugin.clearLeaderboardFile();
         } else {
-            plugin.getLogger().warning("World not found: " + worldName);
+            plugin.logWarning("Le monde " + worldName + " n'est pas trouvable");
         }
     }
 
     public boolean forceSpawnWither() {
         if (currentWither == null || currentWither.isDead()) {
             spawnWither();
-            plugin.getLogger().info("Wither forcefully spawned by command.");
+            plugin.logInfo("Wither invoqué de force par commande.");
             return true;
         } else {
-            plugin.getLogger().info("Wither already exists and is not dead.");
+            plugin.logInfo("Tentative d'invocation d'un wither avec un wither déjà présent");
             return false;
         }
     }
@@ -120,28 +138,28 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
                 plugin.saveDamageLeaderboard();
                 plugin.clearDamageMap();
                 witherDied();
-                plugin.getLogger().info("Wither died, state reset.");
+                plugin.logInfo("Wither mort, état réinitialisé.");
             }
         }
     }
 
     private void witherDied() {
         currentWither = null;
+        witherSpawned = false;
     }
 
     private String formatTime(int seconds) {
         int minutes = seconds / 60;
         int remainingSeconds = seconds % 60;
-
-        String minuteString = minutes == 1 ? plugin.getLanguageMessage("Time minute") : plugin.getLanguageMessage("Time minutes");
-        String secondString = remainingSeconds == 1 ? plugin.getLanguageMessage("Time second") : plugin.getLanguageMessage("Time seconds");
+        String minuteWord = minutes == 1 ? plugin.getLanguageMessage("messages.Time minute") : plugin.getLanguageMessage("messages.Time minutes");
+        String secondWord = remainingSeconds == 1 ? plugin.getLanguageMessage("messages.Time second") : plugin.getLanguageMessage("messages.Time seconds");
 
         if (minutes > 0 && remainingSeconds > 0) {
-            return minutes + " " + minuteString + plugin.getLanguageMessage("Time and") + remainingSeconds + " " + secondString;
+            return minutes + " " + minuteWord + plugin.getLanguageMessage("messages.Time and") + remainingSeconds + " " + secondWord;
         } else if (minutes > 0) {
-            return minutes + " " + minuteString;
+            return minutes + " " + minuteWord;
         } else {
-            return remainingSeconds + " " + secondString;
+            return remainingSeconds + " " + secondWord;
         }
     }
 }

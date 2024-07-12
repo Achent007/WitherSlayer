@@ -7,6 +7,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.OfflinePlayer;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -83,8 +84,7 @@ public class WitherSlayerCommands implements CommandExecutor {
             return false;
         }
 
-        boolean spawnSuccess = witherRespawnEvent.forceSpawnWither();
-        if (spawnSuccess) {
+        if (witherRespawnEvent.forceSpawnWither()) {
             sender.sendMessage(plugin.getLanguageMessage("messages.Force spawned"));
         } else {
             sender.sendMessage(plugin.getLanguageMessage("messages.Error spawning wither"));
