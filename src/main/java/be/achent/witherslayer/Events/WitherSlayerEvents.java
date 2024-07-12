@@ -2,14 +2,14 @@ package be.achent.witherslayer.Events;
 
 import be.achent.witherslayer.WitherSlayer;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
 import org.bukkit.entity.Wither;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,10 +26,16 @@ public class WitherSlayerEvents implements Listener {
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof Wither) {
             Entity damager = event.getDamager();
+            double damage = event.getFinalDamage();
             if (damager instanceof Player) {
                 Player player = (Player) damager;
-                double damage = event.getFinalDamage();
                 plugin.addDamage(player.getUniqueId(), damage);
+            } else if (damager instanceof Arrow) {
+                Arrow arrow = (Arrow) damager;
+                if (arrow.getShooter() instanceof Player) {
+                    Player player = (Player) arrow.getShooter();
+                    plugin.addDamage(player.getUniqueId(), damage);
+                }
             }
         }
     }
@@ -64,13 +70,11 @@ public class WitherSlayerEvents implements Listener {
 
         double totalDamage = sortedPlayers.stream().mapToDouble(Map.Entry::getValue).sum();
 
-        int totalRewardsGiven = 0;
-
         for (int rank = 0; rank < sortedPlayers.size(); rank++) {
             UUID playerId = sortedPlayers.get(rank).getKey();
             Player player = Bukkit.getPlayer(playerId);
             if (player == null || !player.isOnline()) {
-                continue; // Skip offline players
+                continue;
             }
 
             double playerDamage = sortedPlayers.get(rank).getValue();
@@ -79,23 +83,10 @@ public class WitherSlayerEvents implements Listener {
             double damagePercentage = playerDamage / totalDamage;
             int rewardExp = (int) (plugin.getConfig().getInt("Rewards.EXP") * damagePercentage);
 
-            // Distribute EXP to the player
             player.giveExp(rewardExp);
-
-            // Add reward to total distributed
-            totalRewardsGiven += rewardExp;
-
-            // Log debug information
-            plugin.getLogger().info("Player " + player.getName() + " received " + rewardExp + " EXP for dealing " + playerDamage + " damage.");
-
-            // Execute reward commands for the player
             executeRewards(player, rankPosition, playerDamage, rewardExp);
         }
 
-        // Log total rewards distributed
-        plugin.getLogger().info("Total EXP distributed: " + totalRewardsGiven);
-
-        // Display kill message
         Player killerEntity = wither.getKiller();
         String killerName = killerEntity != null ? killerEntity.getName() : "unknown";
         String killMessage = plugin.getLanguageMessage("messages.Kill message")
@@ -103,10 +94,7 @@ public class WitherSlayerEvents implements Listener {
                 .replace("{wither}", wither.getName());
         Bukkit.broadcastMessage(killMessage);
 
-        // Save damage map
         plugin.saveDamageLeaderboard();
-
-        // Reset damage map
         plugin.clearDamageMap();
     }
 
@@ -129,8 +117,6 @@ public class WitherSlayerEvents implements Listener {
                         int percentage = Integer.parseInt(percentageString);
                         if (random.nextInt(100) < percentage) {
                             String commandToExecute = command.substring(percentageEnd + 1).trim();
-                            // Log debug information
-                            plugin.getLogger().info("Executing command: " + commandToExecute);
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), commandToExecute);
                         }
                     } catch (NumberFormatException e) {
@@ -138,8 +124,6 @@ public class WitherSlayerEvents implements Listener {
                     }
                 }
             } else {
-                // Log debug information
-                plugin.getLogger().info("Executing command: " + command);
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
             }
         }

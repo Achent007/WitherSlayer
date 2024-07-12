@@ -1,15 +1,24 @@
 messages:
   prefix: "&8[&4WitherSlayer&8]"
   Reloaded: "{prefix} &aConfiguration reloaded."
+  Reload failed: '{prefix} &cFailed to reload configuration. Check the console'
   Incorrect usage:
     - "{prefix} &eCommand list :"
     - "&c/witherslayer reload &7- &fReload the plugin"
+    - '&c/witherslayer forcespawn &7- &fForcespawn a wither'
     - "&c/witherslayer leaderboard &7 &fShow damage leaderboard"
   No Permission: "{prefix} &cYou don't have the permission."
-  No Data: "{prefix} &cNo data avaiable."
+  No Data: "{prefix} &cNo data available."
   Leaderboard header: "{prefix} &7- &eLeaderboard"
   Leaderboard position: "{position} &8- &6{player} {damage} damage"
   Leaderboard footer: "{prefix} &7- &eLeaderboard"
   Kill message: "{prefix} &b{player} has slain the wither with their friends."
-  Wither spawned: "{prefix} The wither is back, go exterminate him."
-  Announcement before wither spawn: "{prefix} The wither is coming back in {time} seconds."
+  Wither spawned: "{prefix} &aThe wither is back, go exterminate him."
+  Announcement before wither spawn: "{prefix} &eThe wither is coming back in &6{time}&e."
+  Force spawned: "{prefix} &aYou have successfully invoked a new Wither."
+  Error spawning wither: "{prefix} &cA Wither is already spawned."
+  Time minute: "{minutes} minute"
+  Time minutes: "{minutes} minutes"
+  Time second: "{seconds} second"
+  Time seconds: "{seconds} seconds"
+  Time and: " and "

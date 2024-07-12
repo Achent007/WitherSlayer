@@ -12,12 +12,16 @@ permissions:
     children:
       witherslayer.use: true
       witherslayer.leaderboard: true
+      witherslayer.forcespawn: true
       witherslayer.reload: true
   witherslayer.use:
     description: Permission to use the verification system
     default: op
   witherslayer.leaderboard:
     description: Permission to see the leaderboard
+    default: op
+  witherslayer.forcespawn:
+    description: Permission to forcespawn a wither
     default: op
   witherslayer.reload:
     description: Permission for the reload command
