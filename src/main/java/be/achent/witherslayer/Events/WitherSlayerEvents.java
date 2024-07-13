@@ -99,9 +99,6 @@ public class WitherSlayerEvents implements Listener {
                 .replace("{player}", killerName)
                 .replace("{wither}", wither.getName());
         Bukkit.broadcastMessage(killMessage);
-
-        plugin.saveDamageLeaderboard();
-        plugin.clearDamageMap();
     }
 
     private void executeRewards(Player player, int rank, double damage, int rewardExp) {

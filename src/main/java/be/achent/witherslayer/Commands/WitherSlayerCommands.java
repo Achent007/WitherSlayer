@@ -2,12 +2,10 @@ package be.achent.witherslayer.Commands;
 
 import be.achent.witherslayer.WitherSlayer;
 import be.achent.witherslayer.Events.WitherSlayerRespawnEvent;
-import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.OfflinePlayer;
-
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -93,7 +91,7 @@ public class WitherSlayerCommands implements CommandExecutor {
     }
 
     private void sendLeaderboardEntry(CommandSender sender, Map.Entry<UUID, Double> entry, int index) {
-        OfflinePlayer player = Bukkit.getOfflinePlayer(entry.getKey());
+        OfflinePlayer player = plugin.getServer().getOfflinePlayer(entry.getKey());
         String playerName = player.getName() != null ? player.getName() : "Unknown";
         String message = plugin.getLanguageMessage("messages.Leaderboard position")
                 .replace("{position}", String.valueOf(index + 1))

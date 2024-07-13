@@ -50,9 +50,16 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
                     }
                 }
 
-                if (secondsUntilSpawn == 0 && !witherSpawned) {
-                    spawnWither();
-                    plugin.logInfo("Wither invoqué à " + spawntime);
+                if (secondsUntilSpawn == 0) {
+                    plugin.logInfo("Tentative de réapparition d'un wither à " + spawntime);
+                    if (currentWither == null || currentWither.isDead()) {
+                        plugin.logInfo("currentWither est null ou mort, appel à spawnWither");
+                        spawnWither();
+                    } else {
+                        plugin.logInfo("Un wither est déjà présent à l'emplacement : " + currentWither.getLocation());
+                        Bukkit.broadcastMessage(plugin.getLanguageMessage("messages.Wither already present"));
+                        plugin.logWarning("Tentative de réapparition d'un wither mais un wither est déjà présent.");
+                    }
                 }
             } catch (DateTimeParseException e) {
                 if (!errorLogged) {
@@ -110,11 +117,10 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
             currentWither.setHealth(witherHealth);
 
             witherSpawned = true;
+            plugin.saveWitherState();
 
             Bukkit.broadcastMessage(plugin.getLanguageMessage("messages.Wither spawned").replace("{location}", location.toString()));
             plugin.logInfo("Wither apparu à l'endroit : " + location + " avec " + witherHealth + " PV");
-            plugin.clearDamageMap();
-            plugin.clearLeaderboardFile();
         } else {
             plugin.logWarning("Le monde " + worldName + " n'est pas trouvable");
         }
@@ -124,6 +130,8 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
         if (currentWither == null || currentWither.isDead()) {
             spawnWither();
             plugin.logInfo("Wither invoqué de force par commande.");
+            plugin.clearDamageMap();
+            plugin.saveWitherState();
             return true;
         } else {
             plugin.logInfo("Tentative d'invocation d'un wither avec un wither déjà présent");
@@ -135,9 +143,11 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
     public void onWitherDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof Wither) {
             if (event.getEntity().equals(currentWither)) {
-                plugin.saveDamageLeaderboard();
-                plugin.clearDamageMap();
+                Bukkit.getScheduler().runTaskLater(plugin, plugin::clearLeaderboardFile, 0L);
+                Bukkit.getScheduler().runTaskLater(plugin, plugin::saveDamageLeaderboard, 10L);
+                Bukkit.getScheduler().runTaskLater(plugin, plugin::clearDamageMap, 20L);
                 witherDied();
+                plugin.saveWitherState();
                 plugin.logInfo("Wither mort, état réinitialisé.");
             }
         }
@@ -161,5 +171,13 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
         } else {
             return remainingSeconds + " " + secondWord;
         }
+    }
+
+    public boolean isWitherSpawned() {
+        return witherSpawned;
+    }
+
+    public void setWitherSpawned(boolean witherSpawned) {
+        this.witherSpawned = witherSpawned;
     }
 }
