@@ -12,6 +12,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -33,14 +34,15 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
 
     @Override
     public void run() {
-        LocalTime now = LocalTime.now();
+        LocalTime now = LocalTime.now().withNano(0);
         List<String> spawntimes = parseTimes(plugin.getConfig().getString("wither respawn.spawntimes"));
         List<Integer> preSpawnTimes = parsePreSpawnTimes(plugin.getConfig().getString("wither respawn.respawn announcements"));
 
         for (String spawntime : spawntimes) {
             try {
-                LocalTime spawnTime = LocalTime.parse(spawntime, DateTimeFormatter.ofPattern("HH:mm"));
-                int secondsUntilSpawn = (int) java.time.Duration.between(now, spawnTime).getSeconds();
+                LocalTime spawnTime = LocalTime.parse(spawntime, DateTimeFormatter.ofPattern("HH:mm")).withNano(0);
+                Duration duration = Duration.between(now, spawnTime);
+                int secondsUntilSpawn = (int) duration.getSeconds();
 
                 for (int preTime : preSpawnTimes) {
                     if (secondsUntilSpawn == preTime) {
