@@ -56,7 +56,7 @@ public class WitherSlayerEvents implements Listener {
         String witherWorldName = plugin.getConfig().getString("witherworld");
 
         if (!wither.getWorld().getName().equals(witherWorldName)) {
-            plugin.getLogger().info("Wither killed in a non-target world, no rewards distributed.");
+            plugin.logInfo("Wither killed in a non-target world, no rewards distributed.");
             return;
         }
 
