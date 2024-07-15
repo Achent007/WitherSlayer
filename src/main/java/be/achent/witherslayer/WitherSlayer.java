@@ -6,7 +6,6 @@ import be.achent.witherslayer.Events.WitherSlayerEvents;
 import be.achent.witherslayer.Events.WitherSlayerRespawnEvent;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.Listener;
@@ -26,8 +25,6 @@ import java.util.UUID;
 
 public final class WitherSlayer extends JavaPlugin implements Listener {
 
-    private static WitherSlayer plugin;
-
     private FileConfiguration languageConfig;
     private File languageConfigFile;
     private File leaderboardFile;
@@ -35,13 +32,9 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
     private WitherSlayerRespawnEvent witherRespawnEvent;
     private final Map<UUID, Double> damageMap = new HashMap<>();
     private boolean debugEnabled;
-    private File witherStateFile;
-    private FileConfiguration witherStateConfig;
 
     @Override
     public void onEnable() {
-        plugin = this;
-
         saveDefaultConfig();
         reloadConfig();
         debugEnabled = getConfig().getBoolean("debug", false);
@@ -62,10 +55,6 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         saveWitherState();
-    }
-
-    public static WitherSlayer getInstance() {
-        return plugin;
     }
 
     public void reloadConfigWithErrors(CommandSender sender) {
@@ -256,49 +245,24 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         saveLeaderboardConfig();
     }
 
-    public void clearLeaderboardFile() {
-        if (leaderboardConfig != null) {
-            ConfigurationSection damageSection = leaderboardConfig.getConfigurationSection("damage");
-            if (damageSection != null) {
-                for (String key : damageSection.getKeys(false)) {
-                    leaderboardConfig.set("damage." + key, null);
-                }
-                saveLeaderboardConfig();
-                logInfo("Fichier damageleadeboard.yml remis à zéro.");
+    public void recreateLeaderboardFile() {
+        if (leaderboardFile.exists()) {
+            if (leaderboardFile.delete()) {
+                logInfo("Fichier damageleaderboard.yml supprimé.");
             } else {
-                logSevere("Section 'damage' non trouvée dans le fichier damageleaderboard.yml.");
+                logSevere("Erreur lors de la suppression du fichier damageleaderboard.yml.");
             }
         }
-    }
-
-    public void saveWitherState() {
-        if (witherStateFile == null) {
-            witherStateFile = new File(getDataFolder(), "witherstate.yml");
-        }
-        if (witherStateConfig == null) {
-            witherStateConfig = YamlConfiguration.loadConfiguration(witherStateFile);
-        }
-        if (witherRespawnEvent != null) {
-            witherStateConfig.set("witherSpawned", witherRespawnEvent.isWitherSpawned());
-        }
         try {
-            witherStateConfig.save(witherStateFile);
+            if (leaderboardFile.createNewFile()) {
+                logInfo("Le fichier damageleaderboard.yml a été recréé.");
+            } else {
+                logSevere("Le fichier damageleaderboard.yml n'a pas pu être recréé.");
+            }
         } catch (IOException e) {
-            logSevere("Erreur lors de la sauvegarde du fichier de l'état du Wither : " + e.getMessage());
+            logSevere("Erreur lors de la recréation du fichier de classement : " + e.getMessage());
         }
-    }
-
-    public void loadWitherState() {
-        if (witherStateFile == null) {
-            witherStateFile = new File(getDataFolder(), "witherstate.yml");
-        }
-        if (!witherStateFile.exists()) {
-            saveResource("witherstate.yml", false);
-        }
-        witherStateConfig = YamlConfiguration.loadConfiguration(witherStateFile);
-        if (witherRespawnEvent != null && witherStateConfig.contains("witherSpawned")) {
-            witherRespawnEvent.setWitherSpawned(witherStateConfig.getBoolean("witherSpawned"));
-        }
+        loadLeaderboardConfig();
     }
 
     public void logInfo(String message) {
@@ -315,5 +279,24 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
 
     public void logSevere(String message) {
         getLogger().severe(message);
+    }
+
+    public void saveWitherState() {
+        try {
+            File stateFile = new File(getDataFolder(), "witherstate.yml");
+            FileConfiguration stateConfig = YamlConfiguration.loadConfiguration(stateFile);
+            stateConfig.set("witherSpawned", witherRespawnEvent.isWitherSpawned());
+            stateConfig.save(stateFile);
+        } catch (IOException e) {
+            logSevere("Erreur lors de la sauvegarde de l'état du Wither : " + e.getMessage());
+        }
+    }
+
+    public void loadWitherState() {
+        File stateFile = new File(getDataFolder(), "witherstate.yml");
+        if (stateFile.exists()) {
+            FileConfiguration stateConfig = YamlConfiguration.loadConfiguration(stateFile);
+            witherRespawnEvent.setWitherSpawned(stateConfig.getBoolean("witherSpawned", false));
+        }
     }
 }

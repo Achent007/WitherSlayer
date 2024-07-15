@@ -132,7 +132,6 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
         if (currentWither == null || currentWither.isDead()) {
             spawnWither();
             plugin.logInfo("Wither invoqué de force par commande.");
-            plugin.clearDamageMap();
             plugin.saveWitherState();
             return true;
         } else {
@@ -145,7 +144,7 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
     public void onWitherDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof Wither) {
             if (event.getEntity().equals(currentWither)) {
-                Bukkit.getScheduler().runTaskLater(plugin, plugin::clearLeaderboardFile, 0L);
+                Bukkit.getScheduler().runTaskLater(plugin, plugin::recreateLeaderboardFile, 0L);
                 Bukkit.getScheduler().runTaskLater(plugin, plugin::saveDamageLeaderboard, 10L);
                 Bukkit.getScheduler().runTaskLater(plugin, plugin::clearDamageMap, 20L);
                 witherDied();
