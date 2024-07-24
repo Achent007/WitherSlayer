@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Wither;
 import org.bukkit.event.EventHandler;
@@ -18,6 +19,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener {
 
@@ -69,6 +71,21 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
                     errorLogged = true;
                 }
             }
+        }
+    }
+
+    private String formatTime(int seconds) {
+        int minutes = seconds / 60;
+        int remainingSeconds = seconds % 60;
+        String minuteWord = minutes == 1 ? plugin.getLanguageMessage("messages.Time minute") : plugin.getLanguageMessage("messages.Time minutes");
+        String secondWord = remainingSeconds == 1 ? plugin.getLanguageMessage("messages.Time second") : plugin.getLanguageMessage("messages.Time seconds");
+
+        if (minutes > 0 && remainingSeconds > 0) {
+            return minutes + " " + minuteWord + plugin.getLanguageMessage("messages.Time and") + remainingSeconds + " " + secondWord;
+        } else if (minutes > 0) {
+            return minutes + " " + minuteWord;
+        } else {
+            return remainingSeconds + " " + secondWord;
         }
     }
 
@@ -143,13 +160,16 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
     @EventHandler
     public void onWitherDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof Wither) {
-            if (event.getEntity().equals(currentWither)) {
-                Bukkit.getScheduler().runTaskLater(plugin, plugin::recreateLeaderboardFile, 0L);
-                Bukkit.getScheduler().runTaskLater(plugin, plugin::saveDamageLeaderboard, 10L);
-                Bukkit.getScheduler().runTaskLater(plugin, plugin::clearDamageMap, 20L);
-                witherDied();
-                plugin.saveWitherState();
-                plugin.logInfo("Wither mort, état réinitialisé.");
+            Wither wither = (Wither) event.getEntity();
+            if (wither.equals(currentWither)) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    plugin.recreateLeaderboardFile();
+                    plugin.saveDamageLeaderboard();
+                    plugin.clearDamageMap();
+                    witherDied();
+                    plugin.saveWitherState();
+                    plugin.getLogger().info("Wither mort, état réinitialisé.");
+                });
             }
         }
     }
@@ -159,26 +179,32 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
         witherSpawned = false;
     }
 
-    private String formatTime(int seconds) {
-        int minutes = seconds / 60;
-        int remainingSeconds = seconds % 60;
-        String minuteWord = minutes == 1 ? plugin.getLanguageMessage("messages.Time minute") : plugin.getLanguageMessage("messages.Time minutes");
-        String secondWord = remainingSeconds == 1 ? plugin.getLanguageMessage("messages.Time second") : plugin.getLanguageMessage("messages.Time seconds");
-
-        if (minutes > 0 && remainingSeconds > 0) {
-            return minutes + " " + minuteWord + plugin.getLanguageMessage("messages.Time and") + remainingSeconds + " " + secondWord;
-        } else if (minutes > 0) {
-            return minutes + " " + minuteWord;
-        } else {
-            return remainingSeconds + " " + secondWord;
-        }
-    }
-
     public boolean isWitherSpawned() {
         return witherSpawned;
     }
 
     public void setWitherSpawned(boolean witherSpawned) {
         this.witherSpawned = witherSpawned;
+    }
+
+    public UUID getCurrentWitherUUID() {
+        return currentWither != null ? currentWither.getUniqueId() : null;
+    }
+
+    public void setCurrentWitherUUID(UUID witherUUID) {
+        if (witherUUID == null) {
+            return;
+        }
+
+        for (World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                if (entity instanceof Wither && entity.getUniqueId().equals(witherUUID)) {
+                    this.currentWither = (Wither) entity;
+                    plugin.logInfo("Wither found and set as currentWither: " + witherUUID);
+                    return;
+                }
+            }
+        }
+        plugin.logWarning("Wither with UUID " + witherUUID + " not found in any loaded world");
     }
 }

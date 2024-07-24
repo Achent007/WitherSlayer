@@ -4,7 +4,9 @@ import be.achent.witherslayer.Commands.WitherSlayerCommands;
 import be.achent.witherslayer.Commands.WitherSlayerTabCompleter;
 import be.achent.witherslayer.Events.WitherSlayerEvents;
 import be.achent.witherslayer.Events.WitherSlayerRespawnEvent;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -43,8 +45,8 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         updateConfigFile("config.yml", "config-default.yml");
         updateConfigFile("language.yml", "language-default.yml");
 
-        new WitherSlayerEvents(this);
         witherRespawnEvent = new WitherSlayerRespawnEvent(this);
+        new WitherSlayerEvents(this, witherRespawnEvent);
         witherRespawnEvent.runTaskTimer(this, 0L, 20L);
         loadWitherState();
 
@@ -59,7 +61,6 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
 
     public void reloadConfigWithErrors(CommandSender sender) {
         try {
-            reloadConfig();
             debugEnabled = getConfig().getBoolean("debug", false);
             reloadLanguageConfig();
             loadLeaderboardConfig();
@@ -204,9 +205,6 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
             return;
         }
 
-        for (Map.Entry<UUID, Double> entry : damageMap.entrySet()) {
-            leaderboardConfig.set("damage." + entry.getKey().toString(), entry.getValue());
-        }
         try {
             leaderboardConfig.save(leaderboardFile);
         } catch (IOException e) {
@@ -239,7 +237,14 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
 
         for (Map.Entry<UUID, Double> entry : damageMap.entrySet()) {
             leaderboardConfig.set("damage." + entry.getKey().toString(), entry.getValue());
-            logInfo("Sauvegarde des données du combat effectuée.");
+
+            OfflinePlayer player = Bukkit.getOfflinePlayer(entry.getKey());
+            String playerName = player.getName();
+            if (playerName == null) {
+                playerName = "Unknown";
+            }
+
+            logInfo("Les " + entry.getValue() + " dégats de " + playerName + " ont été enregistrés.");
         }
 
         saveLeaderboardConfig();
@@ -286,6 +291,7 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
             File stateFile = new File(getDataFolder(), "witherstate.yml");
             FileConfiguration stateConfig = YamlConfiguration.loadConfiguration(stateFile);
             stateConfig.set("witherSpawned", witherRespawnEvent.isWitherSpawned());
+            stateConfig.set("currentWitherUUID", witherRespawnEvent.getCurrentWitherUUID() != null ? witherRespawnEvent.getCurrentWitherUUID().toString() : null);
             stateConfig.save(stateFile);
         } catch (IOException e) {
             logSevere("Erreur lors de la sauvegarde de l'état du Wither : " + e.getMessage());
@@ -297,6 +303,11 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         if (stateFile.exists()) {
             FileConfiguration stateConfig = YamlConfiguration.loadConfiguration(stateFile);
             witherRespawnEvent.setWitherSpawned(stateConfig.getBoolean("witherSpawned", false));
+            String witherUUIDString = stateConfig.getString("currentWitherUUID", null);
+            if (witherUUIDString != null && !witherUUIDString.isEmpty()) {
+                UUID witherUUID = UUID.fromString(witherUUIDString);
+                witherRespawnEvent.setCurrentWitherUUID(witherUUID);
+            }
         }
     }
 }
