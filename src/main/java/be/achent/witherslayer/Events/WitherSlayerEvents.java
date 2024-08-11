@@ -30,24 +30,28 @@ public class WitherSlayerEvents implements Listener {
 
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (event.getEntity() instanceof Wither) {
-            Wither wither = (Wither) event.getEntity();
-            String witherWorldName = plugin.getConfig().getString("witherworld");
-            if (!wither.getWorld().getName().equals(witherWorldName)) {
-                return;
-            }
+        if (!(event.getEntity() instanceof Wither)) {
+            return;
+        }
 
-            Entity damager = event.getDamager();
-            double damage = event.getFinalDamage();
-            if (damager instanceof Player) {
-                Player player = (Player) damager;
+        Wither wither = (Wither) event.getEntity();
+        String witherWorldName = plugin.getConfig().getString("witherworld");
+
+        if (!wither.getWorld().getName().equals(witherWorldName)) {
+            return;
+        }
+
+        Entity damager = event.getDamager();
+        double damage = event.getFinalDamage();
+
+        if (damager instanceof Player) {
+            Player player = (Player) damager;
+            plugin.addDamage(player.getUniqueId(), damage);
+        } else if (damager instanceof Arrow) {
+            Arrow arrow = (Arrow) damager;
+            if (arrow.getShooter() instanceof Player) {
+                Player player = (Player) arrow.getShooter();
                 plugin.addDamage(player.getUniqueId(), damage);
-            } else if (damager instanceof Arrow) {
-                Arrow arrow = (Arrow) damager;
-                if (arrow.getShooter() instanceof Player) {
-                    Player player = (Player) arrow.getShooter();
-                    plugin.addDamage(player.getUniqueId(), damage);
-                }
             }
         }
     }
@@ -111,21 +115,6 @@ public class WitherSlayerEvents implements Listener {
                     .replace("{player}", killerName)
                     .replace("{wither}", wither.getName());
             Bukkit.broadcastMessage(killMessage);
-
-            {
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    witherRespawnEvent.setCurrentWitherUUID(null);
-                    plugin.recreateLeaderboardFile();
-                });
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    plugin.saveDamageLeaderboard();
-                    plugin.logInfo("Damage leaderboard saved. (WSLEvents)");
-                }, 10L);
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    plugin.clearDamageMap();
-                    plugin.logInfo("Damage map cleared. (WSLEvents)");
-                }, 20L);
-            }
         } else {
             plugin.getLogger().warning("Killed wither is not the current target.");
         }

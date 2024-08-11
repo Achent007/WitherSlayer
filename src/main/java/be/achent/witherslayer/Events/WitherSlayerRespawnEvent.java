@@ -1,3 +1,4 @@
+
 package be.achent.witherslayer.Events;
 
 import be.achent.witherslayer.WitherSlayer;
@@ -56,14 +57,14 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
                 }
 
                 if (secondsUntilSpawn == 0) {
-                    plugin.logInfo("Tentative de réapparition d'un wither à " + spawntime);
-                    if (currentWither == null || currentWither.isDead()) {
-                        plugin.logInfo("currentWither est null ou mort, appel à spawnWither");
-                        spawnWither();
-                    } else {
-                        plugin.logInfo("Un wither est déjà présent à l'emplacement : " + currentWither.getLocation());
+                    plugin.logInfo("Tentative de réapparition d'un Wither à " + spawntime);
+
+                    if (currentWither != null && !currentWither.isDead()) {
+                        plugin.logWarning("Un Wither est déjà présent à l'emplacement : " + currentWither.getLocation());
                         Bukkit.broadcastMessage(plugin.getLanguageMessage("messages.Wither already present"));
-                        plugin.logWarning("Tentative de réapparition d'un wither mais un wither est déjà présent.");
+                    } else {
+                        plugin.logInfo("Aucun Wither présent ou Wither précédent mort, appel à spawnWither");
+                        spawnWither();
                     }
                 }
             } catch (DateTimeParseException e) {
@@ -137,6 +138,8 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
             currentWither.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(witherHealth);
             currentWither.setHealth(witherHealth);
 
+            setCurrentWitherUUID(currentWither.getUniqueId());
+
             witherSpawned = true;
             plugin.saveWitherState();
 
@@ -168,11 +171,18 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     witherDied();
                     plugin.saveWitherState();
-                    plugin.logInfo("Wither mort, état réinitialisé.");
                     plugin.recreateLeaderboardFile();
                 });
-                Bukkit.getScheduler().runTaskLater(plugin, plugin::saveDamageLeaderboard, 10L);
-                Bukkit.getScheduler().runTaskLater(plugin, plugin::clearDamageMap, 20L);
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    plugin.saveDamageLeaderboard();
+                    plugin.logInfo("Damage leaderboard saved.");
+                }, 10L);
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    plugin.clearDamageMap();
+                    plugin.logInfo("Damage map cleared.");
+                }, 20L);
+            } else {
+                plugin.logWarning("Killed wither is not the current target.");
             }
         }
     }
@@ -197,6 +207,7 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
 
     public void setCurrentWitherUUID(UUID witherUUID) {
         if (witherUUID == null) {
+            plugin.logWarning("Wither UUID is null");
             return;
         }
 
