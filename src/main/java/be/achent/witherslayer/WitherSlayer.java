@@ -57,22 +57,32 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         saveWitherState();
+        if (witherRespawnEvent != null) {
+            witherRespawnEvent.cancel();
+        }
     }
 
     public void reloadConfigWithErrors(CommandSender sender) {
         try {
+            reloadConfig();
             debugEnabled = getConfig().getBoolean("debug", false);
             reloadLanguageConfig();
             loadLeaderboardConfig();
             updateConfigFile("config.yml", "config-default.yml");
             updateConfigFile("language.yml", "language-default.yml");
 
-            witherRespawnEvent.resetErrorLogged();
-
             String spawnTimes = getConfig().getString("wither respawn.spawntimes");
             for (String time : spawnTimes.split(",")) {
                 LocalTime.parse(time.trim(), DateTimeFormatter.ofPattern("HH:mm"));
             }
+
+            if (witherRespawnEvent != null) {
+                witherRespawnEvent.cancel();
+            }
+
+            witherRespawnEvent = new WitherSlayerRespawnEvent(this);
+            new WitherSlayerEvents(this, witherRespawnEvent);
+            witherRespawnEvent.runTaskTimer(this, 0L, 20L);
 
             sender.sendMessage(getLanguageMessage("messages.Reloaded"));
         } catch (DateTimeParseException e) {
