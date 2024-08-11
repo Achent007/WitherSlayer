@@ -30,24 +30,28 @@ public class WitherSlayerEvents implements Listener {
 
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (event.getEntity() instanceof Wither) {
-            Wither wither = (Wither) event.getEntity();
-            String witherWorldName = plugin.getConfig().getString("witherworld");
-            if (!wither.getWorld().getName().equals(witherWorldName)) {
-                return;
-            }
+        if (!(event.getEntity() instanceof Wither)) {
+            return;
+        }
 
-            Entity damager = event.getDamager();
-            double damage = event.getFinalDamage();
-            if (damager instanceof Player) {
-                Player player = (Player) damager;
+        Wither wither = (Wither) event.getEntity();
+        String witherWorldName = plugin.getConfig().getString("witherworld");
+
+        if (!wither.getWorld().getName().equals(witherWorldName)) {
+            return;
+        }
+
+        Entity damager = event.getDamager();
+        double damage = event.getFinalDamage();
+
+        if (damager instanceof Player) {
+            Player player = (Player) damager;
+            plugin.addDamage(player.getUniqueId(), damage);
+        } else if (damager instanceof Arrow) {
+            Arrow arrow = (Arrow) damager;
+            if (arrow.getShooter() instanceof Player) {
+                Player player = (Player) arrow.getShooter();
                 plugin.addDamage(player.getUniqueId(), damage);
-            } else if (damager instanceof Arrow) {
-                Arrow arrow = (Arrow) damager;
-                if (arrow.getShooter() instanceof Player) {
-                    Player player = (Player) arrow.getShooter();
-                    plugin.addDamage(player.getUniqueId(), damage);
-                }
             }
         }
     }
@@ -84,6 +88,7 @@ public class WitherSlayerEvents implements Listener {
                     .collect(Collectors.toList());
 
             double totalDamage = sortedPlayers.stream().mapToDouble(Map.Entry::getValue).sum();
+            plugin.getLogger().info("Total damage: " + totalDamage);
 
             for (int rank = 0; rank < sortedPlayers.size(); rank++) {
                 UUID playerId = sortedPlayers.get(rank).getKey();
@@ -98,6 +103,8 @@ public class WitherSlayerEvents implements Listener {
                 double damagePercentage = playerDamage / totalDamage;
                 int rewardExp = (int) (plugin.getConfig().getInt("Rewards.EXP") * damagePercentage);
 
+                plugin.getLogger().info("Rewarding player: " + player.getName() + " with rank: " + rankPosition + ", damage: " + playerDamage + ", exp: " + rewardExp);
+
                 player.giveExp(rewardExp);
                 executeRewards(player, rankPosition, playerDamage, rewardExp);
             }
@@ -108,7 +115,8 @@ public class WitherSlayerEvents implements Listener {
                     .replace("{player}", killerName)
                     .replace("{wither}", wither.getName());
             Bukkit.broadcastMessage(killMessage);
-            witherRespawnEvent.setCurrentWitherUUID(null);
+        } else {
+            plugin.getLogger().warning("Killed wither is not the current target.");
         }
     }
 
@@ -136,6 +144,7 @@ public class WitherSlayerEvents implements Listener {
                         int percentage = Integer.parseInt(percentageString);
                         if (random.nextInt(100) < percentage) {
                             String commandToExecute = command.substring(percentageEnd + 1).trim();
+                            plugin.getLogger().info("Executing conditional command: " + commandToExecute);
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), commandToExecute);
                         }
                     } catch (NumberFormatException e) {
