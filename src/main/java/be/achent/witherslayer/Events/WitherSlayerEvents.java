@@ -1,6 +1,7 @@
 package be.achent.witherslayer.Events;
 
 import be.achent.witherslayer.WitherSlayer;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
@@ -11,6 +12,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -53,6 +56,16 @@ public class WitherSlayerEvents implements Listener {
                 Player player = (Player) arrow.getShooter();
                 plugin.addDamage(player.getUniqueId(), damage);
             }
+        }
+    }
+
+    public static void giveMoney(Player player, double amount) {
+        Economy econ = WitherSlayer.getEconomy();
+        if (econ != null && amount > 0) {
+            BigDecimal amountBD = new BigDecimal(amount);
+            amountBD = amountBD.setScale(2, RoundingMode.HALF_UP);
+            int amountInCents = amountBD.multiply(new BigDecimal(100)).intValue();
+            econ.depositPlayer(player, amountInCents);
         }
     }
 
@@ -102,11 +115,14 @@ public class WitherSlayerEvents implements Listener {
 
                 double damagePercentage = playerDamage / totalDamage;
                 int rewardExp = (int) (plugin.getConfig().getInt("Rewards.EXP") * damagePercentage);
+                double rewardMoney = (int) (plugin.getConfig().getInt("Rewards.Money") * damagePercentage);
 
-                plugin.getLogger().info("Rewarding player: " + player.getName() + " with rank: " + rankPosition + ", damage: " + playerDamage + ", exp: " + rewardExp);
+                plugin.getLogger().info("Rewarding player: " + player.getName() + " with rank: " + rankPosition + ", damage: " + playerDamage + ", exp: " + rewardExp + ", money:" + rewardMoney );
 
                 player.giveExp(rewardExp);
-                executeRewards(player, rankPosition, playerDamage, rewardExp);
+                WitherSlayerEvents.giveMoney(player, rewardMoney);
+
+                executeRewards(player, rankPosition, playerDamage, rewardExp, rewardMoney);
             }
 
             Player killerEntity = wither.getKiller();
@@ -120,7 +136,7 @@ public class WitherSlayerEvents implements Listener {
         }
     }
 
-    private void executeRewards(Player player, int rank, double damage, int rewardExp) {
+    private void executeRewards(Player player, int rank, double damage, int rewardExp, double rewardMoney) {
         List<String> commands = plugin.getConfig().getStringList("Rewards.rankcommands_" + rank);
         Random random = new Random();
 
@@ -133,7 +149,8 @@ public class WitherSlayerEvents implements Listener {
             command = command.replace("{player}", player.getName())
                     .replace("{position}", String.valueOf(rank))
                     .replace("{damage}", String.format("%.2f", damage))
-                    .replace("{exp}", String.valueOf(rewardExp));
+                    .replace("{exp}", String.valueOf(rewardExp))
+                    .replace("{money}", String.format("%.2f", rewardMoney));
 
             if (command.contains("{")) {
                 int percentageStart = command.indexOf("{");

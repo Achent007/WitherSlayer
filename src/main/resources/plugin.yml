@@ -2,6 +2,7 @@ name: WitherSlayer
 author: Achent
 version: '${project.version}'
 main: be.achent.witherslayer.WitherSlayer
+depend: [Vault]
 commands:
   witherslayer:
     description: Main Command

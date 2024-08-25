@@ -4,6 +4,7 @@ import be.achent.witherslayer.Commands.WitherSlayerCommands;
 import be.achent.witherslayer.Commands.WitherSlayerTabCompleter;
 import be.achent.witherslayer.Events.WitherSlayerEvents;
 import be.achent.witherslayer.Events.WitherSlayerRespawnEvent;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -11,6 +12,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.Listener;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -34,9 +36,15 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
     private WitherSlayerRespawnEvent witherRespawnEvent;
     private final Map<UUID, Double> damageMap = new HashMap<>();
     private boolean debugEnabled;
+    private static Economy econ = null;
 
     @Override
     public void onEnable() {
+        if (!setupEconomy()) {
+            getLogger().severe("Vault plugin not found! Disabling plugin.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         saveDefaultConfig();
         reloadConfig();
         debugEnabled = getConfig().getBoolean("debug", false);
@@ -60,6 +68,22 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         if (witherRespawnEvent != null) {
             witherRespawnEvent.cancel();
         }
+    }
+
+    public boolean setupEconomy() {
+        if (getServer().getPluginManager().getPlugin("Vault") == null) {
+            return false;
+        }
+        RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
+        if (rsp == null) {
+            return false;
+        }
+        econ = rsp.getProvider();
+        return econ != null;
+    }
+
+    public static Economy getEconomy() {
+        return econ;
     }
 
     public void reloadConfigWithErrors(CommandSender sender) {
