@@ -14,15 +14,23 @@ wither respawn:
 
 # Rewards for each wither killed for everyone
 # You can define specific command for each rank of the leaderboard
-# All variables : {player}, {position}, {damage}, {exp}, {money}
+# All variables : {player}, {playeramount}, {position}, {damage}, {exp}, {money}, playerDamage, totalDamage
 Rewards:
-  EXP: 1000
-  Money: 1000000
-  rankcommands_1:
-    - '{100}give {player} diamond 1' #100% chance reward
-    - '{50}give {player} diamond 1' #50% chance to have this diamond in addition of the first one
-  rankcommands_2:
-    - '{50}give {player} diamond 1'
+  GlobalRewards:
+    EXP:
+      type: global
+      amount: 1000
+      playerbased_equation: "amount * (playerDamage / totalDamage)"
+    Money:
+      type: playerbased
+      amount: 1000000
+      playerbased_equation: "amount * (playerDamage / totalDamage)"
+  RankRewards:
+    rankcommands_1:
+      - '{100}give {player} diamond 1' #100% chance reward
+      - '{50}give {player} diamond 1' #50% chance to have this diamond in addition of the first one
+    rankcommands_2:
+      - '{50}give {player} diamond 1'
 
 # Debug mode
 debug: false

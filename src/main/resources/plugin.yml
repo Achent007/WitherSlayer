@@ -2,7 +2,7 @@ name: WitherSlayer
 author: Achent
 version: '${project.version}'
 main: be.achent.witherslayer.WitherSlayer
-depend: [Vault]
+softdepend: ["Vault", "PlaceholderAPI"]
 commands:
   witherslayer:
     description: Main Command

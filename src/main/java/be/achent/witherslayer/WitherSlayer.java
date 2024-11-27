@@ -4,6 +4,7 @@ import be.achent.witherslayer.Commands.WitherSlayerCommands;
 import be.achent.witherslayer.Commands.WitherSlayerTabCompleter;
 import be.achent.witherslayer.Events.WitherSlayerEvents;
 import be.achent.witherslayer.Events.WitherSlayerRespawnEvent;
+import be.achent.witherslayer.Placeholders.WitherSlayerPlaceholder;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -37,6 +38,8 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
     private final Map<UUID, Double> damageMap = new HashMap<>();
     private boolean debugEnabled;
     private static Economy econ = null;
+    private File dataFile;
+    private FileConfiguration dataConfig;
 
     @Override
     public void onEnable() {
@@ -45,11 +48,19 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new WitherSlayerPlaceholder(this).register();
+            getLogger().info("PlaceholderAPI support enabled!");
+        } else {
+            getLogger().warning("PlaceholderAPI not found, placeholders won't be available.");
+        }
+
         saveDefaultConfig();
         reloadConfig();
         debugEnabled = getConfig().getBoolean("debug", false);
         loadLanguageConfig();
         loadLeaderboardConfig();
+        loadDataFile();
         updateConfigFile("config.yml", "config-default.yml");
         updateConfigFile("language.yml", "language-default.yml");
 
@@ -304,6 +315,30 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
         loadLeaderboardConfig();
     }
 
+    public void loadDataFile() {
+        dataFile = new File(getDataFolder(), "data.yml");
+        if (!dataFile.exists()) {
+            try {
+                dataFile.createNewFile();
+            } catch (IOException e) {
+                getLogger().severe("Could not create data.yml: " + e.getMessage());
+            }
+        }
+        dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+    }
+
+    public FileConfiguration getDataConfig() {
+        return dataConfig;
+    }
+
+    public void saveDataFile() {
+        try {
+            dataConfig.save(dataFile);
+        } catch (IOException e) {
+            getLogger().severe("Could not save data.yml: " + e.getMessage());
+        }
+    }
+
     public void logInfo(String message) {
         if (debugEnabled) {
             getLogger().info(message);
@@ -343,5 +378,9 @@ public final class WitherSlayer extends JavaPlugin implements Listener {
                 witherRespawnEvent.setCurrentWitherUUID(witherUUID);
             }
         }
+    }
+
+    public WitherSlayerRespawnEvent getWitherRespawnEvent() {
+        return witherRespawnEvent;
     }
 }

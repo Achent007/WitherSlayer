@@ -222,4 +222,22 @@ public class WitherSlayerRespawnEvent extends BukkitRunnable implements Listener
         }
         plugin.logWarning("Wither with UUID " + witherUUID + " not found in any loaded world");
     }
+
+    public String getNextSpawnTime() {
+        List<String> spawnTimes = parseTimes(plugin.getConfig().getString("wither respawn.spawntimes"));
+        LocalTime now = LocalTime.now().withNano(0);
+
+        for (String time : spawnTimes) {
+            LocalTime spawnTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("HH:mm")).withNano(0);
+            if (spawnTime.isAfter(now)) {
+                return spawnTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+            }
+        }
+
+        if (!spawnTimes.isEmpty()) {
+            return LocalTime.parse(spawnTimes.get(0), DateTimeFormatter.ofPattern("HH:mm")).format(DateTimeFormatter.ofPattern("HH:mm"));
+        }
+
+        return "Aucune heure définie";
+    }
 }
