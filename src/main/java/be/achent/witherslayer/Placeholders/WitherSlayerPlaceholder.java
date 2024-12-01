@@ -55,14 +55,14 @@ public class WitherSlayerPlaceholder extends PlaceholderExpansion {
                 DateTimeFormatter formatterWithoutDate = DateTimeFormatter.ofPattern("HH:mm");
 
                 LocalDateTime nextSpawnTime;
-                if (nextSpawnTimeStr.length() > 5) { // Si la chaîne est au format complet
+                if (nextSpawnTimeStr.length() > 5) {
                     nextSpawnTime = LocalDateTime.parse(nextSpawnTimeStr, formatterWithDate);
                 } else {
                     nextSpawnTime = LocalDateTime.now().withHour(Integer.parseInt(nextSpawnTimeStr.split(":")[0]))
                             .withMinute(Integer.parseInt(nextSpawnTimeStr.split(":")[1]));
                 }
 
-                return nextSpawnTime.format(DateTimeFormatter.ofPattern("HH:mm")); // Affiche seulement l'heure et les minutes
+                return nextSpawnTime.format(DateTimeFormatter.ofPattern("HH:mm"));
             } catch (DateTimeParseException e) {
                 plugin.getLogger().warning("Failed to parse nextSpawnTime: " + nextSpawnTimeStr);
                 return "Invalid Date Format";

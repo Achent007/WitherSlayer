@@ -2,6 +2,8 @@ package be.achent.witherslayer.Events;
 
 import be.achent.witherslayer.WitherSlayer;
 import net.milkbowl.vault.economy.Economy;
+import net.objecthunter.exp4j.Expression;
+import net.objecthunter.exp4j.ExpressionBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
@@ -12,8 +14,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
@@ -32,11 +32,10 @@ public class WitherSlayerEvents implements Listener {
 
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (!(event.getEntity() instanceof Wither)) {
+        if (!(event.getEntity() instanceof Wither wither)) {
             return;
         }
 
-        Wither wither = (Wither) event.getEntity();
         String witherWorldName = plugin.getConfig().getString("witherworld");
 
         if (!wither.getWorld().getName().equals(witherWorldName)) {
@@ -46,13 +45,10 @@ public class WitherSlayerEvents implements Listener {
         Entity damager = event.getDamager();
         double damage = event.getFinalDamage();
 
-        if (damager instanceof Player) {
-            Player player = (Player) damager;
+        if (damager instanceof Player player) {
             plugin.addDamage(player.getUniqueId(), damage);
-        } else if (damager instanceof Arrow) {
-            Arrow arrow = (Arrow) damager;
-            if (arrow.getShooter() instanceof Player) {
-                Player player = (Player) arrow.getShooter();
+        } else if (damager instanceof Arrow arrow) {
+            if (arrow.getShooter() instanceof Player player) {
                 plugin.addDamage(player.getUniqueId(), damage);
             }
         }
@@ -69,15 +65,14 @@ public class WitherSlayerEvents implements Listener {
 
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
-        if (!(event.getEntity() instanceof Wither)) {
+        if (!(event.getEntity() instanceof Wither wither)) {
             return;
         }
 
-        Wither wither = (Wither) event.getEntity();
         String witherWorldName = plugin.getConfig().getString("witherworld");
 
         if (!wither.getWorld().getName().equals(witherWorldName)) {
-            plugin.getLogger().info("Wither killed in a non-target world, no rewards distributed.");
+            plugin.logInfo("Wither killed in a non-target world, no rewards distributed.");
             return;
         }
 
@@ -86,11 +81,11 @@ public class WitherSlayerEvents implements Listener {
         plugin.logInfo("Vanilla drops canceled");
 
         if (wither.getUniqueId().equals(witherRespawnEvent.getCurrentWitherUUID())) {
-            plugin.getLogger().info("The killed wither is the current target, processing rewards event.");
+            plugin.logInfo("The killed wither is the current target, processing rewards event.");
 
             Map<UUID, Double> damageMap = plugin.getDamageMap();
             if (damageMap.isEmpty()) {
-                plugin.getLogger().warning("Damage map is empty!");
+                plugin.logWarning("Damage map is empty!");
                 return;
             }
 
@@ -104,7 +99,7 @@ public class WitherSlayerEvents implements Listener {
                     .collect(Collectors.toList());
 
             double totalDamage = sortedPlayers.stream().mapToDouble(Map.Entry::getValue).sum();
-            plugin.getLogger().info("Total damage: " + totalDamage);
+            plugin.logInfo("Total damage: " + totalDamage);
 
             applyGlobalRewards(sortedPlayers, totalDamage);
             applyRankRewards(sortedPlayers);
@@ -116,7 +111,7 @@ public class WitherSlayerEvents implements Listener {
                     .replace("{wither}", wither.getName());
             Bukkit.broadcastMessage(killMessage);
         } else {
-            plugin.getLogger().warning("Killed wither is not the current target.");
+            plugin.logWarning("Killed wither is not the current target.");
         }
     }
 
@@ -156,8 +151,8 @@ public class WitherSlayerEvents implements Listener {
 
             Rewards rewards = calculateRewards(entry.getKey(), playerDamage, totalDamage);
 
-            player.giveExp((int) rewards.getExp());
-            giveMoney(player, rewards.getMoney());
+            player.giveExp((int) rewards.exp());
+            giveMoney(player, rewards.money());
         }
     }
 
@@ -188,8 +183,8 @@ public class WitherSlayerEvents implements Listener {
         command = command.replace("{player}", player.getName())
                 .replace("{position}", String.valueOf(rankPosition))
                 .replace("{damage}", String.format("%.2f", damage))
-                .replace("{exp}", String.valueOf((int) rewards.getExp()))
-                .replace("{money}", String.format("%.2f", rewards.getMoney()));
+                .replace("{exp}", String.valueOf((int) rewards.exp()))
+                .replace("{money}", String.format("%.2f", rewards.money()));
 
         if (command.contains("{")) {
             int percentageStart = command.indexOf("{");
@@ -201,22 +196,22 @@ public class WitherSlayerEvents implements Listener {
                     if (percentage >= 0 && percentage <= 100) {
                         if (new java.util.Random().nextInt(100) < percentage) {
                             String commandToExecute = command.substring(percentageEnd + 1).trim();
-                            plugin.getLogger().info("Executing conditional command: " + commandToExecute);
+                            plugin.logInfo("Executing conditional command: " + commandToExecute);
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), commandToExecute);
                         } else {
-                            plugin.getLogger().info("Command skipped due to percentage condition: " + command);
+                            plugin.logInfo("Command skipped due to percentage condition: " + command);
                         }
                     } else {
-                        plugin.getLogger().warning("Invalid percentage value (must be 0-100): " + percentageString);
+                        plugin.logWarning("Invalid percentage value (must be 0-100): " + percentageString);
                     }
                 } catch (NumberFormatException e) {
-                    plugin.getLogger().warning("Invalid percentage format: " + percentageString);
+                    plugin.logWarning("Invalid percentage format: " + percentageString);
                 }
                 return;
             }
         }
 
-        Bukkit.getLogger().info("Executing command: " + command);
+        plugin.logInfo("Executing command: " + command);
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
     }
 
@@ -224,22 +219,7 @@ public class WitherSlayerEvents implements Listener {
         return plugin.getDamageMap().size();
     }
 
-    public static class Rewards {
-        private final double exp;
-        private final double money;
-
-        public Rewards(double exp, double money) {
-            this.exp = exp;
-            this.money = money;
-        }
-
-        public double getExp() {
-            return exp;
-        }
-
-        public double getMoney() {
-            return money;
-        }
+    public record Rewards(double exp, double money) {
     }
 
     private double evaluateEquation(String equation, double amount, double playerDamage, double totalDamage, int amountPlayer, String resourceType) {
@@ -249,12 +229,22 @@ public class WitherSlayerEvents implements Listener {
                 .replace("{amountplayer}", String.valueOf(amountPlayer));
 
         try {
-            ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
-            double result = Double.parseDouble(engine.eval(equation).toString());
-            plugin.getLogger().info("Evaluated equation for " + resourceType + ": " + equation + " = " + result);
+            Expression expression = new ExpressionBuilder(equation)
+                    .variable("amount")
+                    .variable("playerDamage")
+                    .variable("totalDamage")
+                    .variable("amountplayer")
+                    .build()
+                    .setVariable("amount", amount)
+                    .setVariable("playerDamage", playerDamage)
+                    .setVariable("totalDamage", totalDamage)
+                    .setVariable("amountplayer", amountPlayer);
+
+            double result = expression.evaluate();
+            plugin.logInfo("Evaluated equation for " + resourceType + ": " + equation + " = " + result);
             return result;
         } catch (Exception e) {
-            plugin.getLogger().warning("Invalid equation syntax for " + resourceType + ": " + equation + ". Using default amount: " + amount);
+            plugin.logWarning("Invalid equation syntax for " + resourceType + ": " + equation + ". Error: " + e.getMessage() + ". Using default amount: " + amount);
             return amount;
         }
     }
